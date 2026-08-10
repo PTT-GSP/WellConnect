@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WellConnect - Dashboard ติดตามผลการตรวจสุขภาพพนักงานกลุ่มเสี่ยง</title>
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #f1f5f9;
+            --panel-bg: rgba(255, 255, 255, 0.85);
+            --panel-border: rgba(15, 23, 42, 0.08);
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent-glow: rgba(99, 102, 241, 0.05);
+            
+            /* Status Colors */
+            --color-danger: #ef4444; /* High Risk */
+            --color-warning: #f59e0b; /* Med Risk */
+            --color-success: #10b981; /* Low Risk / Normal */
+            --color-info: #3b82f6; /* Stats / Total */
+            
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 10% 20%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
+                radial-gradient(at 90% 80%, rgba(59, 130, 246, 0.03) 0px, transparent 50%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, .font-outfit {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Container */
+        .dashboard-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        .header-title h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .header-title p {
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+            font-size: 0.95rem;
+        }
+
+        .header-meta {
+            text-align: right;
+        }
+
+        .header-meta .date {
+            font-weight: 600;
+            color: #4f46e5;
+        }
+
+        .header-meta .status-badge {
+            display: inline-block;
+            margin-top: 0.5rem;
+            padding: 0.35rem 0.75rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #059669;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Glassmorphism Panel */
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 8px -1px rgba(15, 23, 42, 0.03);
+            transition: var(--transition);
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(99, 102, 241, 0.2);
+            box-shadow: 0 10px 25px -3px rgba(99, 102, 241, 0.08), 0 4px 12px -2px rgba(99, 102, 241, 0.03);
+        }
+
+        /* KPI Row */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .kpi-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .kpi-card.info::before { background-color: var(--color-info); }
+        .kpi-card.danger::before { background-color: var(--color-danger); }
+        .kpi-card.warning::before { background-color: var(--color-warning); }
+        .kpi-card.success::before { background-color: var(--color-success); }
+
+        .kpi-content h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .kpi-content .value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .kpi-card.info .kpi-icon { background: rgba(59, 130, 246, 0.1); color: var(--color-info); }
+        .kpi-card.danger .kpi-icon { background: rgba(239, 68, 68, 0.1); color: var(--color-danger); }
+        .kpi-card.warning .kpi-icon { background: rgba(245, 158, 11, 0.1); color: var(--color-warning); }
+        .kpi-card.success .kpi-icon { background: rgba(16, 185, 129, 0.1); color: var(--color-success); }
+
+        /* Charts Section */
+        .charts-row {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.5rem;
+        }
+
+        .chart-box-large {
+            grid-column: span 6;
+        }
+
+        .chart-box-small {
+            grid-column: span 3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (max-width: 1024px) {
+            .chart-box-large { grid-column: span 12; }
+            .chart-box-small { grid-column: span 6; }
+        }
+
+        @media (max-width: 640px) {
+            .chart-box-small { grid-column: span 12; }
+        }
+
+        .chart-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .chart-header h2 {
+            font-size: 1.15rem;
+            font-weight: 600;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+        }
+
+        /* Filter Section */
+        .filters-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .filters-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .filters-grid {
+            display: flex;
+            align-items: flex-end;
+            flex-wrap: nowrap;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 1100px) {
+            .filters-grid {
+                flex-wrap: wrap;
+            }
+            .filter-group {
+                flex: 1 1 180px !important;
+                max-width: none !important;
+                width: auto !important;
+            }
+            .btn-group {
+                width: 100%;
+                justify-content: flex-end;
+            }
+        }
+
+        .filter-group label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .filter-group input, .filter-group select {
+            background: #ffffff;
+            border: 1px solid rgba(15, 23, 42, 0.15);
+            color: var(--text-primary);
+            padding: 0.6rem 0.9rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .filter-group input:focus, .filter-group select:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+        }
+
+
+
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .btn {
+            padding: 0.6rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            outline: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            border: none;
+            color: white;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #ffffff;
+            border: 1px solid rgba(15, 23, 42, 0.15);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: #f8fafc;
+            border-color: rgba(15, 23, 42, 0.3);
+        }
+
+        /* Data Table */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 0.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.04);
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background: rgba(99, 102, 241, 0.03);
+            color: var(--text-primary);
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .badge-danger { background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .badge-warning { background: rgba(245, 158, 11, 0.1); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .badge-success { background: rgba(16, 185, 129, 0.1); color: #059669; border: 1px solid rgba(16, 185, 129, 0.2); }
+
+        /* Clickable Action Badges */
+        .act-link {
+            text-decoration: none;
+            display: inline-block;
+            transition: var(--transition);
+        }
+
+        .act-link:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Red Todo Badge */
+        .badge-todo {
+            background-color: #fef2f2 !important;
+            color: #991b1b !important;
+            border: 1px dashed #f87171 !important;
+            padding: 0.35rem 0.65rem !important;
+            border-radius: 6px !important;
+            font-weight: 600 !important;
+            cursor: pointer;
+            display: inline-flex !important;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 1px 2px rgba(239, 68, 68, 0.05);
+            transition: var(--transition);
+            font-size: 0.75rem;
+        }
+
+        .badge-todo:hover {
+            background-color: #fee2e2 !important;
+            border-color: #ef4444 !important;
+            color: #b91c1c !important;
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.12);
+        }
+
+        /* Green Completed Badge */
+        .badge-completed {
+            background-color: #d1fae5 !important;
+            color: #065f46 !important;
+            border: 1px solid #34d399 !important;
+            padding: 0.35rem 0.65rem !important;
+            border-radius: 6px !important;
+            font-weight: 600 !important;
+            display: inline-flex !important;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75rem;
+            transition: var(--transition);
+        }
+
+        .badge-completed:hover {
+            opacity: 0.9;
+        }
+
+        /* Pagination & Info */
+        .table-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .pagination {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .pagination-btn {
+            background: #ffffff;
+            border: 1px solid rgba(15, 23, 42, 0.15);
+            color: var(--text-primary);
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            border-color: rgba(15, 23, 42, 0.3);
+            background: #f8fafc;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .pagination-btn.active {
+            background: #4f46e5;
+            border-color: #4f46e5;
+            color: white;
+        }
+
+        /* Utility class */
+        .text-center { text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header>
+            <div class="header-title">
+                <h1>WellConnect Dashboard</h1>
+                <p>ระบบรายงานข้อมูลสุขภาพพนักงานกลุ่มเสี่ยง ประจำปี 2569</p>
+            </div>
+            <div class="header-meta">
+                <div class="date font-outfit" id="currentDate">6 สิงหาคม 2569</div>
+                <div class="status-badge">อัปเดตข้อมูลเสร็จสิ้น</div>
+            </div>
+        </header>
+
+        <!-- KPI Summary Cards -->
+        <div class="kpi-row">
+            <div class="glass-panel kpi-card info">
+                <div class="kpi-content">
+                    <h3>พนักงานกลุ่มเสี่ยงทั้งหมด</h3>
+                    <div class="value font-outfit" id="kpiTotal">0</div>
+                </div>
+                <div class="kpi-icon">👥</div>
+            </div>
+            <div class="glass-panel kpi-card danger">
+                <div class="kpi-content">
+                    <h3>เสี่ยงสูง Metabolic Syndrome</h3>
+                    <div class="value font-outfit" id="kpiMetabolicHigh">0</div>
+                </div>
+                <div class="kpi-icon">⚠️</div>
+            </div>
+            <div class="glass-panel kpi-card warning">
+                <div class="kpi-content">
+                    <h3>เสี่ยงสูง CVD Risk (10 ปี)</h3>
+                    <div class="value font-outfit" id="kpiCvdHigh">0</div>
+                </div>
+                <div class="kpi-icon">❤️</div>
+            </div>
+            <div class="glass-panel kpi-card success">
+                <div class="kpi-content">
+                    <h3>การมีส่วนร่วมกิจกรรมเฉลี่ย</h3>
+                    <div class="value font-outfit" id="kpiAvgParticipation">0%</div>
+                </div>
+                <div class="kpi-icon">📊</div>
+            </div>
+        </div>
+
+        <!-- Section 1: Health Risks Risks -->
+        <div class="charts-row">
+            <div class="glass-panel chart-box-small">
+                <div class="chart-header">
+                    <h2>ภาวะ Metabolic Syndrome</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="metabolicChart"></canvas>
+                </div>
+            </div>
+            <div class="glass-panel chart-box-small">
+                <div class="chart-header">
+                    <h2>ระดับความเสี่ยง CVD (10 ปี)</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="cvdChart"></canvas>
+                </div>
+            </div>
+            <div class="glass-panel chart-box-large">
+                <div class="chart-header">
+                    <h2>10 อันดับหน่วยงานที่มีพนักงานเสี่ยงสูงสุด</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="deptChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Health Activities Charts -->
+        <div class="chart-header" style="margin-top: 1rem; margin-bottom: -1rem;">
+            <h2 style="font-size: 1.35rem; font-weight: 700; color: var(--text-primary);">การติดตามการมีส่วนร่วมในกิจกรรมส่งเสริมสุขภาพ 2569</h2>
+        </div>
+
+        <div class="charts-row">
+            <div class="glass-panel chart-box-large">
+                <div class="chart-header">
+                    <h2>สัดส่วนการเข้าร่วมกิจกรรมแยกประเภท (%)</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="activityCompletionsChart"></canvas>
+                </div>
+            </div>
+            <div class="glass-panel chart-box-large">
+                <div class="chart-header">
+                    <h2>5 อันดับหน่วยงานที่มีการเข้าร่วมกิจกรรมสูงสุด (%)</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="deptParticipationChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="glass-panel filters-panel">
+            <div class="filters-title">ตัวกรองข้อมูลและเครื่องมือสืบค้น</div>
+            <div class="filters-grid">
+                <div class="filter-group" style="flex: 1; min-width: 150px; max-width: 200px;">
+                    <label for="searchQuery">ค้นหา (ชื่อ / นามสกุล / รหัสพนักงาน)</label>
+                    <input type="text" id="searchQuery" placeholder="พิมพ์เพื่อค้นหา...">
+                </div>
+                <div class="filter-group" style="width: 140px; flex: 0 0 140px;">
+                    <label for="filterWorkGroup">กลุ่มงาน (Work Group)</label>
+                    <select id="filterWorkGroup">
+                        <option value="">ทั้งหมด</option>
+                        <option value="Operation">Operation</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Support">Support</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="width: 140px; flex: 0 0 140px;">
+                    <label for="filterDept">หน่วยงาน (Department)</label>
+                    <select id="filterDept">
+                        <option value="">ทั้งหมด</option>
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="filter-group" style="width: 160px; flex: 0 0 160px;">
+                    <label for="filterParticipation">การมีส่วนร่วมกิจกรรม</label>
+                    <select id="filterParticipation">
+                        <option value="">ทั้งหมด</option>
+                        <option value="100">100% (ทำครบ 4 กิจกรรม)</option>
+                        <option value="75">75% (ทำ 3 กิจกรรม)</option>
+                        <option value="50">50% (ทำ 2 กิจกรรม)</option>
+                        <option value="25">25% (ทำ 1 กิจกรรม)</option>
+                        <option value="0">0% (ยังไม่ได้ร่วมกิจกรรม)</option>
+                    </select>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="btnReset">รีเซ็ตตัวกรอง</button>
+                    <button class="btn btn-primary" id="btnExport">Export Data</button>
+                    <button class="btn btn-secondary" id="btnImport" style="background-color: #f8fafc; border-color: rgba(15, 23, 42, 0.15); color: var(--text-primary);">Import Data</button>
+                    <input type="file" id="csvFileInput" accept=".csv, .txt, text/plain, text/csv, .xlsx, .xls" style="display: none;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table Section -->
+        <div class="glass-panel">
+            <div class="table-container">
+                <table id="employeeTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 90px; white-space: nowrap;">รหัสพนักงาน</th>
+                            <th style="white-space: nowrap;">ชื่อ - นามสกุล</th>
+                            <th style="width: 110px; white-space: nowrap;">หน่วยงาน</th>
+                            <th style="width: 110px; white-space: nowrap;">กลุ่มงาน</th>
+                            <th style="width: 120px; white-space: nowrap;" class="text-center">ความคืบหน้า (%)</th>
+                            <th style="width: 760px; white-space: nowrap;" class="text-center">ประวัติการเข้าร่วมกิจกรรม 2569 (คลิกที่ป้ายสีแดงเพื่อเริ่มดำเนินการกิจกรรม)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Rows will be populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-footer">
+                <div id="tableInfo">กำลังแสดงข้อมูล 0 ถึง 0 จากทั้งหมด 0 รายการ</div>
+                <div class="pagination" id="paginationControls">
+                    <!-- Buttons will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Injection Block -->
+    <script>
+        // Clean JSON data will be injected here
+        const dashboardData = /* INSERT_JSON_HERE */;
+    </script>
+
+    <!-- Main Logic Script -->
+    <script>
+        // Automatic Cache Migration & Schema Reset
+        const CURRENT_VERSION = 'v2_multi_select';
+        if (localStorage.getItem('wellconnect_version') !== CURRENT_VERSION) {
+            localStorage.removeItem('wellconnect_employees');
+            localStorage.setItem('wellconnect_version', CURRENT_VERSION);
+        }
+
+        // State Management (Directly use compiled Excel data for real-time collaboration)
+        let allEmployees = dashboardData.all_employees || [];
+        localStorage.removeItem('wellconnect_employees'); // Clear old local cache to avoid visual conflicts
+        
+        let filteredEmployees = [...allEmployees];
+        let currentPage = 1;
+        const rowsPerPage = 10;
+        
+        // Chart Instances
+        let metabolicChartInstance = null;
+        let cvdChartInstance = null;
+        let deptChartInstance = null;
+        let activityChartInstance = null;
+        let deptPartChartInstance = null;
+
+        // Configurable wellness activity URLs (Modify these with actual PTT portal links)
+        const ACTIVITY_URLS = {
+            kickoff: (empId) => `https://ptt.conicle.com/course/2066/?is_coniclex=true`,
+            personalPlan: (empId) => `https://forms.cloud.microsoft/r/vYvCaU6r0x`,
+            followUp: (empId) => `https://forms.cloud.microsoft/r/vTQ9KSQ6Zj`,
+            fitPossible: (empId) => `https://liff.line.me/2009930792-Cp6bBuSL`
+        };
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            initDate();
+            initFilters();
+            renderKPIs();
+            initCharts();
+            applyFilters();
+            
+            // Set up event listeners
+            document.getElementById('searchQuery').addEventListener('input', () => { currentPage = 1; applyFilters(); });
+            document.getElementById('filterWorkGroup').addEventListener('change', () => { currentPage = 1; applyFilters(); });
+            document.getElementById('filterDept').addEventListener('change', () => { currentPage = 1; applyFilters(); });
+            document.getElementById('filterParticipation').addEventListener('change', () => { currentPage = 1; applyFilters(); });
+            
+            document.getElementById('btnReset').addEventListener('click', resetFilters);
+            document.getElementById('btnExport').addEventListener('click', exportToCSV);
+
+            // Import data listeners
+            document.getElementById('btnImport').addEventListener('click', () => {
+                document.getElementById('csvFileInput').click();
+            });
+            document.getElementById('csvFileInput').addEventListener('change', handleFileImport);
+        });
+
+        // Set Thai Date display
+        function initDate() {
+            document.getElementById('currentDate').innerText = "6 สิงหาคม 2569";
+        }
+
+        // Dynamically populate department dropdown
+        function initFilters() {
+            const deptSelect = document.getElementById('filterDept');
+            if (!deptSelect) return;
+            deptSelect.innerHTML = '<option value="">ทั้งหมด</option>';
+            
+            // Get unique departments, fallback to pre-compiled dashboardData.departments if empty
+            let depts = [];
+            if (typeof dashboardData !== 'undefined' && dashboardData && dashboardData.departments && dashboardData.departments.length > 0) {
+                depts = dashboardData.departments.map(d => d.name).filter(Boolean).sort();
+            } else if (typeof allEmployees !== 'undefined' && allEmployees) {
+                depts = [...new Set(allEmployees.map(emp => emp.dept).filter(Boolean))].sort();
+            }
+            
+            depts.forEach(dept => {
+                const opt = document.createElement('option');
+                opt.value = dept;
+                opt.innerText = dept;
+                deptSelect.appendChild(opt);
+            });
+        }
+
+        // Calculate and render KPIs
+        function renderKPIs() {
+            document.getElementById('kpiTotal').innerText = allEmployees.length;
+            
+            const metHigh = allEmployees.filter(emp => emp.metabolic === "ความเสี่ยงสูง").length;
+            document.getElementById('kpiMetabolicHigh').innerText = metHigh;
+            
+            const cvdHigh = allEmployees.filter(emp => emp.cvd === "ความเสี่ยงสูง").length;
+            document.getElementById('kpiCvdHigh').innerText = cvdHigh;
+            
+            // Calculate Average Activity Participation
+            const sumParticipation = allEmployees.reduce((sum, emp) => sum + (emp.participationRate || 0), 0);
+            const avgParticipation = allEmployees.length > 0 ? (sumParticipation / allEmployees.length) : 0;
+            document.getElementById('kpiAvgParticipation').innerText = `${avgParticipation.toFixed(1)}%`;
+        }
+
+        // Render Charts using Chart.js
+        function initCharts() {
+            // Destroy existing charts to prevent canvas re-use errors on data reload
+            if (metabolicChartInstance) metabolicChartInstance.destroy();
+            if (cvdChartInstance) cvdChartInstance.destroy();
+            if (deptChartInstance) deptChartInstance.destroy();
+            if (activityChartInstance) activityChartInstance.destroy();
+            if (deptPartChartInstance) deptPartChartInstance.destroy();
+
+            // Light Mode Chart Defaults
+            Chart.defaults.color = '#64748b';
+            Chart.defaults.borderColor = 'rgba(15, 23, 42, 0.05)';
+            Chart.defaults.font.family = "'Inter', sans-serif";
+
+            // 1. Metabolic Chart
+            const metData = getRiskCounts('metabolic');
+            const ctxMet = document.getElementById('metabolicChart').getContext('2d');
+            metabolicChartInstance = new Chart(ctxMet, {
+                type: 'doughnut',
+                data: {
+                    labels: ['เสี่ยงสูง', 'เสี่ยงปานกลาง', 'เสี่ยงน้อย'],
+                    datasets: [{
+                        data: [metData['ความเสี่ยงสูง'] || 0, metData['ความเสี่ยงปานกลาง'] || 0, metData['ความเสี่ยงน้อย'] || 0],
+                        backgroundColor: ['#dc2626', '#d97706', '#059669'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10 } }
+                    },
+                    cutout: '65%'
+                }
+            });
+
+            // 2. CVD Chart
+            const cvdData = getRiskCounts('cvd');
+            const ctxCvd = document.getElementById('cvdChart').getContext('2d');
+            cvdChartInstance = new Chart(ctxCvd, {
+                type: 'doughnut',
+                data: {
+                    labels: ['เสี่ยงสูง', 'เสี่ยงปานกลาง', 'เสี่ยงต่ำ'],
+                    datasets: [{
+                        data: [cvdData['ความเสี่ยงสูง'] || 0, cvdData['ความเสี่ยงปานกลาง'] || 0, cvdData['ความเสี่ยงต่ำ'] || 0],
+                        backgroundColor: ['#dc2626', '#d97706', '#2563eb'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10 } }
+                    },
+                    cutout: '65%'
+                }
+            });
+
+            // 3. Departments Bar Chart (Top 10)
+            const deptStats = {};
+            allEmployees.forEach(emp => {
+                deptStats[emp.dept] = (deptStats[emp.dept] || 0) + 1;
+            });
+            const topDepts = Object.entries(deptStats)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+                
+            const ctxDept = document.getElementById('deptChart').getContext('2d');
+            deptChartInstance = new Chart(ctxDept, {
+                type: 'bar',
+                data: {
+                    labels: topDepts.map(d => d[0]),
+                    datasets: [{
+                        label: 'จำนวนพนักงานกลุ่มเสี่ยง (คน)',
+                        data: topDepts.map(d => d[1]),
+                        backgroundColor: 'rgba(79, 70, 229, 0.85)',
+                        hoverBackgroundColor: 'rgba(79, 70, 229, 1)',
+                        borderRadius: 6,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { stepSize: 1 } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // 4. Activity Completions Bar Chart (Wellness Activities)
+            const kickoffCount = allEmployees.filter(emp => emp.kickoff).length;
+            const planCount = allEmployees.filter(emp => emp.personalPlan).length;
+            const followCount = allEmployees.filter(emp => emp.followUp).length;
+            const fitCount = allEmployees.filter(emp => emp.fitPossible).length;
+
+            const totalEmps = allEmployees.length;
+            const kickoffPct = ((kickoffCount / totalEmps) * 100).toFixed(1);
+            const planPct = ((planCount / totalEmps) * 100).toFixed(1);
+            const followPct = ((followCount / totalEmps) * 100).toFixed(1);
+            const fitPct = ((fitCount / totalEmps) * 100).toFixed(1);
+
+            const ctxAct = document.getElementById('activityCompletionsChart').getContext('2d');
+            activityChartInstance = new Chart(ctxAct, {
+                type: 'bar',
+                data: {
+                    labels: ['Kick-Off GSP', 'จัดทำ Personal Plan', 'Follow-Up 3 เดือน', 'GSP Fit Possible'],
+                    datasets: [{
+                        label: 'สัดส่วนการเข้าร่วมกิจกรรม (%)',
+                        data: [kickoffPct, planPct, followPct, fitPct],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.85)',
+                            'rgba(16, 185, 129, 0.85)',
+                            'rgba(245, 158, 11, 0.85)',
+                            'rgba(236, 72, 153, 0.85)'
+                        ],
+                        borderRadius: 6,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { min: 0, max: 100, ticks: { callback: value => value + '%' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // 5. Top Departments by Activity Participation (Recalculated dynamically)
+            const deptPartStats = {};
+            allEmployees.forEach(emp => {
+                if (!emp.dept) return;
+                if (!deptPartStats[emp.dept]) {
+                    deptPartStats[emp.dept] = { total: 0, sum: 0 };
+                }
+                deptPartStats[emp.dept].total++;
+                deptPartStats[emp.dept].sum += (emp.participationRate || 0);
+            });
+
+            const dynDeptStats = Object.entries(deptPartStats).map(([name, stats]) => {
+                return {
+                    name: name,
+                    avg_participation: stats.total > 0 ? parseFloat((stats.sum / stats.total).toFixed(1)) : 0
+                };
+            });
+
+            const topPartDepts = dynDeptStats
+                .sort((a, b) => b.avg_participation - a.avg_participation)
+                .slice(0, 5);
+
+            const ctxDeptPart = document.getElementById('deptParticipationChart').getContext('2d');
+            deptPartChartInstance = new Chart(ctxDeptPart, {
+                type: 'bar',
+                data: {
+                    labels: topPartDepts.map(d => d.name),
+                    datasets: [{
+                        label: 'อัตราการมีส่วนร่วมเฉลี่ย (%)',
+                        data: topPartDepts.map(d => d.avg_participation),
+                        backgroundColor: 'rgba(124, 58, 237, 0.85)',
+                        hoverBackgroundColor: 'rgba(124, 58, 237, 1)',
+                        borderRadius: 6,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { min: 0, max: 100, ticks: { callback: value => value + '%' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // Helper to count risk categories
+        function getRiskCounts(key) {
+            const counts = {};
+            allEmployees.forEach(emp => {
+                const val = emp[key];
+                if (val) {
+                    counts[val] = (counts[val] || 0) + 1;
+                }
+            });
+            return counts;
+        }
+
+        // Filter and Search Logic
+        function applyFilters() {
+            const query = document.getElementById('searchQuery').value.toLowerCase().trim();
+            const workGroup = document.getElementById('filterWorkGroup').value;
+            const dept = document.getElementById('filterDept').value;
+            const participation = document.getElementById('filterParticipation').value;
+
+            filteredEmployees = allEmployees.filter(emp => {
+                // Search query
+                const fullName = `${emp.title || ''}${emp.fname || ''} ${emp.lname || ''}`.toLowerCase();
+                const matchesSearch = !query || 
+                    fullName.includes(query) || 
+                    (emp.id && emp.id.toString().includes(query)) ||
+                    (emp.dept && emp.dept.toLowerCase().includes(query));
+
+                // Dropdowns
+                const matchesWorkGroup = !workGroup || emp.group === workGroup;
+                const matchesDept = !dept || emp.dept === dept;
+                const matchesParticipation = !participation || emp.participationRate === parseInt(participation);
+
+                return matchesSearch && matchesWorkGroup && matchesDept && matchesParticipation;
+            });
+
+            renderTable();
+        }
+
+        // Reset all filters
+        function resetFilters() {
+            document.getElementById('searchQuery').value = '';
+            document.getElementById('filterWorkGroup').value = '';
+            document.getElementById('filterDept').value = '';
+            document.getElementById('filterParticipation').value = '';
+            currentPage = 1;
+            applyFilters();
+        }
+
+        // Render Table Data & Pagination
+        function renderTable() {
+            const tbody = document.querySelector('#employeeTable tbody');
+            tbody.innerHTML = '';
+
+            if (filteredEmployees.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding: 2rem;">ไม่พบข้อมูลพนักงานตามที่สืบค้น</td></tr>';
+                document.getElementById('tableInfo').innerText = 'กำลังแสดงข้อมูล 0 ถึง 0 จากทั้งหมด 0 รายการ';
+                document.getElementById('paginationControls').innerHTML = '';
+                return;
+            }
+
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = Math.min(startIndex + rowsPerPage, filteredEmployees.length);
+            const paginatedItems = filteredEmployees.slice(startIndex, endIndex);
+
+            // Activity Badge / Link generator helper
+            const makeActBadge = (completed, label, url, tooltip) => {
+                if (completed) {
+                    return `<span class="badge-completed" title="${tooltip} (เสร็จสิ้น)"><span style="font-size: 10px;">✓</span> ${label}</span>`;
+                } else {
+                    return `<a href="${url}" target="_blank" class="act-link" title="${tooltip} (ยังไม่เสร็จสิ้น - คลิกเพื่อเข้าดำเนินการ)">
+                                <span class="badge-todo"><span style="font-size: 10px;">+</span> ${label}</span>
+                            </a>`;
+                }
+            };
+
+            paginatedItems.forEach(emp => {
+                const tr = document.createElement('tr');
+                
+                // Metabolic Badge Style
+                let metBadgeClass = 'badge-success';
+                if (emp.metabolic === 'ความเสี่ยงสูง') metBadgeClass = 'badge-danger';
+                if (emp.metabolic === 'ความเสี่ยงปานกลาง') metBadgeClass = 'badge-warning';
+
+                // CVD Badge Style
+                let cvdBadgeClass = 'badge-success';
+                if (emp.cvd === 'ความเสี่ยงสูง') cvdBadgeClass = 'badge-danger';
+                if (emp.cvd === 'ความเสี่ยงปานกลาง') cvdBadgeClass = 'badge-warning';
+                if (emp.cvd === 'ความเสี่ยงต่ำ') cvdBadgeClass = 'badge-success';
+
+                // Wellness activity URL generation based on employee ID
+                const koUrl = ACTIVITY_URLS.kickoff(emp.id);
+                const ppUrl = ACTIVITY_URLS.personalPlan(emp.id);
+                const fuUrl = ACTIVITY_URLS.followUp(emp.id);
+                const fpUrl = ACTIVITY_URLS.fitPossible(emp.id);
+
+                // Wellness activity badges with exact names requested
+                const kickoffBadge = makeActBadge(emp.kickoff, 'Kick-Off', koUrl, 'เข้าร่วม Kick-Off GSP WellConnect');
+                const planBadge = makeActBadge(emp.personalPlan, 'จัดทำ Personal Plan', ppUrl, 'จัดทำ Personal Plan');
+                const followBadge = makeActBadge(emp.followUp, 'Follow-Up รอบ 3 เดือน', fuUrl, 'Follow-Up การดำเนินงาน 3 เดือน');
+                const fitBadge = makeActBadge(emp.fitPossible, 'ลงทะเบียน GSP Fit Possible', fpUrl, 'เข้าร่วม GSP Fit Possible');
+                
+                // Percentage badge style
+                let pctClass = 'badge-danger';
+                if (emp.participationRate >= 75) pctClass = 'badge-success';
+                else if (emp.participationRate >= 50) pctClass = 'badge-warning';
+
+                const rateBadge = `<span class="badge ${pctClass}" style="font-weight:800; white-space: nowrap; font-size: 0.8rem; padding: 0.35rem 0.65rem; min-width: 50px;">${emp.participationRate}%</span>`;
+
+                tr.innerHTML = `
+                    <td class="font-outfit" style="font-weight: 500; white-space: nowrap;">${emp.id || '-'}</td>
+                    <td style="font-weight: 500; color: var(--text-primary); white-space: nowrap;">${emp.title || ''}${emp.fname || ''} ${emp.lname || ''}</td>
+                    <td style="white-space: nowrap;">${emp.dept || '-'}</td>
+                    <td style="white-space: nowrap; font-weight: 500; color: var(--text-primary);">${emp.group || '-'}</td>
+                    <td class="text-center" style="white-space: nowrap;">${rateBadge}</td>
+                    <td class="text-center" style="white-space: nowrap;">
+                        <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap;">
+                            ${kickoffBadge} ${planBadge} ${followBadge} ${fitBadge}
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Update Info
+            document.getElementById('tableInfo').innerText = `กำลังแสดงข้อมูล ${startIndex + 1} ถึง ${endIndex} จากทั้งหมด ${filteredEmployees.length} รายการ`;
+            
+            renderPaginationControls();
+        }
+
+        // Render Pagination buttons
+        function renderPaginationControls() {
+            const container = document.getElementById('paginationControls');
+            container.innerHTML = '';
+
+            const totalPages = Math.ceil(filteredEmployees.length / rowsPerPage);
+            if (totalPages <= 1) return;
+
+            // Prev Button
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'pagination-btn';
+            prevBtn.innerText = 'ก่อนหน้า';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderTable();
+                }
+            });
+            container.appendChild(prevBtn);
+
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                const btn = document.createElement('button');
+                btn.className = `pagination-btn ${currentPage === i ? 'active' : ''}`;
+                btn.innerText = i;
+                btn.addEventListener('click', () => {
+                    currentPage = i;
+                    renderTable();
+                });
+                container.appendChild(btn);
+            }
+
+            // Next Button
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'pagination-btn';
+            nextBtn.innerText = 'ถัดไป';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderTable();
+                }
+            });
+            container.appendChild(nextBtn);
+        }
+
+        // Export data to CSV
+        function exportToCSV() {
+            if (filteredEmployees.length === 0) {
+                alert('ไม่มีข้อมูลสำหรับส่งออก');
+                return;
+            }
+
+            let csvContent = "\ufeff"; // BOM for Thai Excel compatibility
+            csvContent += "รหัสพนักงาน,ชื่อ,นามสกุล,แผนก,กลุ่มงาน,Kick-Off GSP,Personal Plan,Follow-Up 3 เดือน,GSP Fit Possible,เปอร์เซ็นต์การมีส่วนร่วม\n";
+
+            filteredEmployees.forEach(emp => {
+                const name = emp.title + emp.fname;
+                const row = [
+                    emp.id || '',
+                    name || '',
+                    emp.lname || '',
+                    emp.dept || '',
+                    emp.group || '',
+                    emp.kickoff ? 'เข้าร่วม' : 'ไม่เข้าร่วม',
+                    emp.personalPlan ? 'ดำเนินการแล้วเสร็จ' : 'ยังไม่ดำเนินการ',
+                    emp.followUp ? 'ดำเนินการแล้วเสร็จ' : 'ยังไม่ดำเนินการ',
+                    emp.fitPossible ? 'เข้าร่วม' : 'ไม่เข้าร่วม',
+                    `${emp.participationRate}%`
+                ].map(val => `"${val.toString().replace(/"/g, '""')}"`).join(",");
+                csvContent += row + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `wellconnect_participation_employees_${new Date().toISOString().slice(0,10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // CSV Parser supporting quotes, custom delimiters and newlines
+        function parseCSV(text, delimiter = ",") {
+            const lines = [];
+            let row = [""];
+            let inQuotes = false;
+
+            for (let i = 0; i < text.length; i++) {
+                const c = text[i];
+                const next = text[i+1];
+                if (c === '"') {
+                    if (inQuotes && next === '"') {
+                        row[row.length - 1] += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (c === delimiter && !inQuotes) {
+                    row.push("");
+                } else if ((c === '\r' || c === '\n') && !inQuotes) {
+                    if (c === '\r' && next === '\n') {
+                        i++;
+                    }
+                    lines.push(row);
+                    row = [""];
+                } else {
+                    row[row.length - 1] += c;
+                }
+            }
+            if (row.length > 1 || row[0] !== "") {
+                lines.push(row);
+            }
+            return lines;
+        }
+
+        // Handle CSV File Import with delimiter auto-detection and encoding fallbacks
+        function handleFileImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Check if it's a binary Excel file
+            const fileName = file.name.toLowerCase();
+            if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                alert("เกิดข้อผิดพลาด: คุณเลือกไฟล์ Excel (.xlsx / .xls)\n\nกรุณาใช้คำสั่ง 'บันทึกเป็น' (Save As) ในโปรแกรม Excel แล้วเลือกประเภทไฟล์เป็น 'CSV (UTF-8) หรือ CSV (Comma Separated)' ก่อนนำมาเลือกนำเข้าข้อมูลค่ะ");
+                e.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+
+            // Reusable function to parse text using specific encoding
+            function processText(text, encodingUsed) {
+                // Strip BOM (Byte Order Mark) if present to prevent parsing errors
+                if (text.charCodeAt(0) === 0xFEFF || text.startsWith("\ufeff")) {
+                    text = text.substring(1);
+                }
+
+                // Auto-detect delimiter: check count of commas vs semicolons in the first line
+                // Support multiple newline styles (\r\n, \r, \n)
+                const firstLine = text.split(/\r?\n|\r|\n/)[0] || "";
+                const commaCount = (firstLine.match(/,/g) || []).length;
+                const semiCount = (firstLine.match(/;/g) || []).length;
+                const tabCount = (firstLine.match(/\t/g) || []).length;
+
+                let delimiter = ",";
+                if (semiCount > commaCount) delimiter = ";";
+                if (tabCount > semiCount && tabCount > commaCount) delimiter = "\t";
+
+                const rows = parseCSV(text, delimiter);
+                if (rows.length < 2) {
+                    return { success: false, error: "ไฟล์ CSV ว่างเปล่าหรือไม่มีข้อมูลเพียงพอ" };
+                }
+
+                // Check headers
+                const headers = rows[0].map(h => h.trim().toLowerCase());
+
+                // Debug logs for developer inspection
+                console.log("CSV Import - Encoding:", encodingUsed, "| Delimiter:", delimiter);
+                console.log("CSV Import - First row cells parsed:", rows[0]);
+                console.log("CSV Import - Normalized headers:", headers);
+                
+                // Flexible matching for Employee ID
+                const idIdx = headers.findIndex(h => 
+                    h.includes("รหัสพนักงาน") || 
+                    h.includes("รหัส") || 
+                    h.includes("id") || 
+                    h.includes("emp_id") || 
+                    h.includes("employee")
+                );
+
+                if (idIdx === -1) {
+                    // Fail and flag for retry if we used UTF-8 (could be a Thai encoding mismatch)
+                    return { success: false, needRetry: encodingUsed === "UTF-8" };
+                }
+
+                // Look for activity header indexes
+                const koIdx = headers.findIndex(h => h.includes("kick-off") || h.includes("kickoff") || h.includes("ko"));
+                const planIdx = headers.findIndex(h => h.includes("personal plan") || h.includes("plan") || h.includes("pp"));
+                const followIdx = headers.findIndex(h => h.includes("follow-up") || h.includes("followup") || h.includes("fu"));
+                const fitIdx = headers.findIndex(h => h.includes("fit possible") || h.includes("fitpossible") || h.includes("fp"));
+
+                if (koIdx === -1 && planIdx === -1 && followIdx === -1 && fitIdx === -1) {
+                    return { success: false, error: "ไม่พบคอลัมน์กิจกรรมใดๆ ในไฟล์ CSV (เช่น Kick-Off GSP, Personal Plan, Follow-Up 3 เดือน, GSP Fit Possible)\n\nกรุณาตรวจสอบว่าชื่อคอลัมน์ถูกต้องและตรงตามรูปแบบที่ส่งออก" };
+                }
+
+                let updatedCount = 0;
+                // Make a map of current employees by ID for fast lookup
+                const empMap = {};
+                allEmployees.forEach((emp, index) => {
+                    if (emp.id) {
+                        empMap[emp.id.toString().trim()] = index;
+                    }
+                });
+
+                // Helper to determine true/false from Thai/English positive keywords
+                const isPositive = (val) => {
+                    if (!val) return false;
+                    const v = val.trim().toLowerCase();
+                    return v === "เข้าร่วม" || v === "ดำเนินการแล้วเสร็จ" || v === "ผ่าน" || 
+                           v === "yes" || v === "true" || v === "✓" || v === "1" || v === "completed" ||
+                           v === "ผ่านกิจกรรมแล้ว" || v === "ดำเนินการแล้ว";
+                };
+
+                // Process each data row
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (row.length <= idIdx) continue;
+                    
+                    const empIdStr = row[idIdx].trim();
+                    if (!empIdStr) continue;
+
+                    if (empMap.hasOwnProperty(empIdStr)) {
+                        const empIndex = empMap[empIdStr];
+                        const emp = allEmployees[empIndex];
+                        
+                        if (koIdx !== -1 && koIdx < row.length) {
+                            emp.kickoff = isPositive(row[koIdx]);
+                        }
+                        if (planIdx !== -1 && planIdx < row.length) {
+                            emp.personalPlan = isPositive(row[planIdx]);
+                        }
+                        if (followIdx !== -1 && followIdx < row.length) {
+                            emp.followUp = isPositive(row[followIdx]);
+                        }
+                        if (fitIdx !== -1 && fitIdx < row.length) {
+                            emp.fitPossible = isPositive(row[fitIdx]);
+                        }
+
+                        // Recalculate participationRate
+                        let completedCount = 0;
+                        if (emp.kickoff) completedCount++;
+                        if (emp.personalPlan) completedCount++;
+                        if (emp.followUp) completedCount++;
+                        if (emp.fitPossible) completedCount++;
+                        emp.participationRate = completedCount * 25;
+
+                        updatedCount++;
+                    }
+                }
+
+                if (updatedCount === 0) {
+                    return { success: false, error: "ไม่พบข้อมูลรหัสพนักงานที่ตรงกับฐานข้อมูลกลุ่มเสี่ยงปัจจุบัน" };
+                }
+
+                // Save to localStorage
+                localStorage.setItem('wellconnect_employees', JSON.stringify(allEmployees));
+
+                // Update UI State
+                filteredEmployees = [...allEmployees];
+                renderKPIs();
+                initCharts();
+                applyFilters();
+
+                return { success: true, count: updatedCount };
+            }
+
+            reader.onload = function(evt) {
+                try {
+                    const text = evt.target.result;
+                    const result = processText(text, "UTF-8");
+
+                    if (result.success) {
+                        alert(`นำเข้าข้อมูลสำเร็จ: อัปเดตสถานะพนักงานกลุ่มเสี่ยง ${result.count} คน เรียบร้อยแล้ว`);
+                    } else if (result.needRetry) {
+                        // Retry with windows-874 encoding (Thai ANSI)
+                        const retryReader = new FileReader();
+                        retryReader.onload = function(retryEvt) {
+                            try {
+                                const retryText = retryEvt.target.result;
+                                const retryResult = processText(retryText, "windows-874");
+                                if (retryResult.success) {
+                                    alert(`นำเข้าข้อมูลสำเร็จ (การถอดรหัสภาษาไทย): อัปเดตสถานะพนักงานกลุ่มเสี่ยง ${retryResult.count} คน เรียบร้อยแล้ว`);
+                                } else {
+                                    alert(retryResult.error || "ไม่พบคอลัมน์ 'รหัสพนักงาน' ในไฟล์ CSV\n\n(หากใช้ Excel ภาษาไทย กรุณาตรวจสอบว่าไม่ได้ลบหัวตารางคอลัมน์แรกออกค่ะ)");
+                                }
+                            } catch (retryErr) {
+                                alert("เกิดข้อผิดพลาดในการถอดรหัสไฟล์ภาษาไทย: " + retryErr.message);
+                            }
+                        };
+                        retryReader.readAsText(file, "windows-874");
+                    } else {
+                        alert(result.error);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("เกิดข้อผิดพลาดในการอ่านไฟล์นำเข้า: " + err.message);
+                } finally {
+                    e.target.value = '';
+                }
+            };
+
+            // Start reading with UTF-8
+            reader.readAsText(file, "UTF-8");
+        }
+
+        // Data auto-reload operates from browser localStorage
+    </script>
+</body>
+</html>
