@@ -634,8 +634,6 @@
                     <thead>
                         <tr>
                             <th style="width: 90px; white-space: nowrap;">รหัสพนักงาน</th>
-                            <th style="white-space: nowrap;">ชื่อ - นามสกุล</th>
-                            <th style="width: 110px; white-space: nowrap;">หน่วยงาน</th>
                             <th style="width: 110px; white-space: nowrap;">กลุ่มงาน</th>
                             <th style="width: 120px; white-space: nowrap;" class="text-center">ความคืบหน้า (%)</th>
                             <th style="width: 760px; white-space: nowrap;" class="text-center">ประวัติการเข้าร่วมกิจกรรม 2569 (คลิกที่ป้ายสีแดงเพื่อเริ่มดำเนินการกิจกรรม)</th>
@@ -1006,7 +1004,7 @@
             tbody.innerHTML = '';
 
             if (filteredEmployees.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="padding: 2rem;">ไม่พบข้อมูลพนักงานตามที่สืบค้น</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding: 2rem;">ไม่พบข้อมูลพนักงานตามที่สืบค้น</td></tr>';
                 document.getElementById('tableInfo').innerText = 'กำลังแสดงข้อมูล 0 ถึง 0 จากทั้งหมด 0 รายการ';
                 document.getElementById('paginationControls').innerHTML = '';
                 return;
@@ -1062,8 +1060,6 @@
 
                 tr.innerHTML = `
                     <td class="font-outfit" style="font-weight: 500; white-space: nowrap;">${emp.id || '-'}</td>
-                    <td style="font-weight: 500; color: var(--text-primary); white-space: nowrap;">${emp.title || ''}${emp.fname || ''} ${emp.lname || ''}</td>
-                    <td style="white-space: nowrap;">${emp.dept || '-'}</td>
                     <td style="white-space: nowrap; font-weight: 500; color: var(--text-primary);">${emp.group || '-'}</td>
                     <td class="text-center" style="white-space: nowrap;">${rateBadge}</td>
                     <td class="text-center" style="white-space: nowrap;">
