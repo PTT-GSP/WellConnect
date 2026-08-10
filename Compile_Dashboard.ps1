@@ -216,4 +216,3 @@ $outputPath = ".\index.html"
 $finalHtml | Out-File -FilePath $outputPath -Encoding utf8
 
 Write-Host "Success! Deduplicated employees: $($employeeList.Count). Written to $outputPath" -ForegroundColor Green
-Read-Host "Press Enter to finish"
