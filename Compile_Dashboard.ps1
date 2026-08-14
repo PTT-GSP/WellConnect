@@ -1,4 +1,4 @@
-# Set UTF8 output encoding
+﻿# Set UTF8 output encoding
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # Find the Excel file
@@ -42,11 +42,11 @@ try {
         $metabolic = $usedRange.Cells.Item($r, 24).Text
         $cvd       = $usedRange.Cells.Item($r, 25).Text
         
-        # Activity completions checked by non-empty cells
-        $kickoff = ($usedRange.Cells.Item($r, 26).Text -ne "")
-        $plan    = ($usedRange.Cells.Item($r, 27).Text -ne "")
-        $follow  = ($usedRange.Cells.Item($r, 28).Text -ne "")
-        $fit     = ($usedRange.Cells.Item($r, 29).Text -ne "")
+        # Activity completions checked by exact text status
+        $kickoff = ($usedRange.Cells.Item($r, 26).Text.Trim() -eq "เข้าร่วม")
+        $plan    = ($usedRange.Cells.Item($r, 27).Text.Trim() -eq "ดำเนินการแล้วเสร็จ")
+        $follow  = ($usedRange.Cells.Item($r, 28).Text.Trim() -eq "ดำเนินการแล้วเสร็จ")
+        $fit     = ($usedRange.Cells.Item($r, 29).Text.Trim() -eq "เข้าร่วม")
         
         $doneCount = 0
         if ($kickoff) { $doneCount++ }
